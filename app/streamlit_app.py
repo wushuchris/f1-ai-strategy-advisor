@@ -47,23 +47,23 @@ def generate_strategy(data: dict) -> dict:
     }
 
 
-# --- SESSION STATE (Telemetry History) ---
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# --- Generate New Data ---
-data = generate_telemetry()
-st.session_state.history.append(data)
+if st.button("Simulate Next Lap"):
+    st.session_state.history.append(generate_telemetry())
 
-# Limit history size
+if not st.session_state.history:
+    st.session_state.history.append(generate_telemetry())
+
+data = st.session_state.history[-1]
+
 if len(st.session_state.history) > 50:
-    st.session_state.history.pop(0)
+    st.session_state.history = st.session_state.history[-50:]
 
 strategy = generate_strategy(data)
 
-# --- METRICS ---
 col1, col2, col3, col4 = st.columns(4)
-
 col1.metric("Lap", data["lap"])
 col2.metric("Lap Time (s)", data["lap_time"])
 col3.metric("Tire Temp (°C)", data["tire_temp"])
@@ -72,19 +72,15 @@ col4.metric("Fuel Level (%)", data["fuel_level"])
 st.subheader("Track Condition")
 st.write(data["track_condition"])
 
-# --- HISTORY DATAFRAME ---
 df = pd.DataFrame(st.session_state.history)
 
 st.subheader("Telemetry History")
 st.dataframe(df, use_container_width=True)
 
-# --- CHART ---
 st.subheader("Lap Time Trend")
-st.line_chart(df["lap_time"])
+st.line_chart(df.set_index(df.index)["lap_time"])
 
-# --- STRATEGY ---
 st.subheader("Strategy Recommendation")
-
 if strategy["priority"] == "High":
     st.warning(f"Priority: {strategy['priority']}")
 else:
@@ -92,4 +88,4 @@ else:
 
 st.write(strategy["recommendation"])
 
-st.success("Live telemetry stream active")
+st.success("Telemetry system active")
