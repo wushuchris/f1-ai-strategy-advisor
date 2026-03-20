@@ -27,26 +27,19 @@ def generate_strategy(data: dict) -> dict:
     priority = "Normal"
 
     if data["tire_temp"] >= 105:
-        actions.append("High tire temperatures detected. Advise tire management and reduced corner aggression.")
+        actions.append("High tire temperatures detected. Advise tire management.")
         priority = "High"
 
     if data["fuel_level"] <= 20:
-        actions.append("Fuel level is low. Consider fuel-saving modes and evaluate pit window.")
-        priority = "High"
-
-    if data["lap"] >= 45 and data["tire_temp"] >= 100:
-        actions.append("Late-race tire wear risk is increasing. Strongly consider a pit stop soon.")
+        actions.append("Fuel low. Consider pit window.")
         priority = "High"
 
     if data["track_condition"] == "Wet":
-        actions.append("Wet conditions detected. Review tire compound choice and reduce push laps.")
+        actions.append("Wet conditions. Adjust tire strategy.")
         priority = "High"
 
     if not actions:
-        actions.append("Telemetry looks stable. Maintain current pace and monitor tire and fuel trends.")
-
-    if data["lap_time"] < 83:
-        actions.append("Current lap pace is strong. Continue pushing if tire and fuel conditions remain acceptable.")
+        actions.append("Conditions stable. Maintain pace.")
 
     return {
         "priority": priority,
@@ -54,9 +47,21 @@ def generate_strategy(data: dict) -> dict:
     }
 
 
+# --- SESSION STATE (Telemetry History) ---
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+# --- Generate New Data ---
 data = generate_telemetry()
+st.session_state.history.append(data)
+
+# Limit history size
+if len(st.session_state.history) > 50:
+    st.session_state.history.pop(0)
+
 strategy = generate_strategy(data)
 
+# --- METRICS ---
 col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("Lap", data["lap"])
@@ -67,10 +72,17 @@ col4.metric("Fuel Level (%)", data["fuel_level"])
 st.subheader("Track Condition")
 st.write(data["track_condition"])
 
-st.subheader("Telemetry Snapshot")
-df = pd.DataFrame([data])
+# --- HISTORY DATAFRAME ---
+df = pd.DataFrame(st.session_state.history)
+
+st.subheader("Telemetry History")
 st.dataframe(df, use_container_width=True)
 
+# --- CHART ---
+st.subheader("Lap Time Trend")
+st.line_chart(df["lap_time"])
+
+# --- STRATEGY ---
 st.subheader("Strategy Recommendation")
 
 if strategy["priority"] == "High":
