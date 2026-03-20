@@ -46,20 +46,6 @@ The result is a cloud-deployed, interactive system that mirrors real-world race 
 
 ---
 
-## 📁 Project Structure
-f1-ai-strategy-advisor/
-├── app/
-│   └── streamlit_app.py
-├── src/
-│   ├── simulation.py
-│   ├── rules.py
-│   ├── llm.py
-│   └── init.py
-├── requirements.txt
-└── README.md
-
----
-
 ## 🧰 Tech Stack
 
 - **Frontend / UI**
