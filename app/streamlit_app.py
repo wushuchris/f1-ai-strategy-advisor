@@ -11,6 +11,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from src.simulation import initialize_race_state, simulate_next_lap
 from src.llm import generate_llm_strategy
 from src.orchestrator import run_strategy_orchestrator
+from src.policy import get_llm_disabled_reason
 from src.verifier import verify_strategy
 from src.evaluation import run_evaluation_suite
 
@@ -271,22 +272,18 @@ status_col2.metric("Calls Remaining", max(0, calls_remaining))
 status_col3.metric("Cooldown (s)", cooldown_remaining)
 
 current_state_hash = build_state_hash(data, df, orchestrated_strategy, verification)
+same_state = st.session_state.last_llm_state_hash == current_state_hash
 
-llm_disabled_reason = None
-
-if not verification["publishable"]:
-    llm_disabled_reason = "AI interpretation is disabled because the deterministic pit-wall strategy failed verification."
-elif fallback_components:
-    llm_disabled_reason = (
-        "AI interpretation is disabled while deterministic specialist fallback mode is active. "
-        "The verified conservative pit-wall strategy remains authoritative until all specialists recover."
-    )
-elif data["lap"] < MIN_LAPS_FOR_LLM:
-    llm_disabled_reason = f"Simulate to at least lap {MIN_LAPS_FOR_LLM} before generating an AI interpretation."
-elif st.session_state.llm_calls_used >= MAX_LLM_CALLS_PER_SESSION:
-    llm_disabled_reason = "Session limit reached for AI interpretations. Reset the simulation to start over."
-elif cooldown_remaining > 0 and st.session_state.last_llm_state_hash != current_state_hash:
-    llm_disabled_reason = f"Please wait {cooldown_remaining} seconds before generating another new AI interpretation."
+llm_disabled_reason = get_llm_disabled_reason(
+    publishable=verification["publishable"],
+    fallback_components=fallback_components,
+    lap=data["lap"],
+    min_lap=MIN_LAPS_FOR_LLM,
+    calls_used=st.session_state.llm_calls_used,
+    max_calls=MAX_LLM_CALLS_PER_SESSION,
+    cooldown_remaining=cooldown_remaining,
+    same_state=same_state,
+)
 
 if llm_disabled_reason:
     st.caption(llm_disabled_reason)
@@ -298,7 +295,7 @@ generate_clicked = st.button(
 
 if generate_clicked:
     # Reuse cached output if telemetry and verified strategy state are unchanged.
-    if st.session_state.last_llm_state_hash == current_state_hash and st.session_state.last_llm_response:
+    if same_state and st.session_state.last_llm_response:
         llm_result = st.session_state.last_llm_response
         st.info("Using cached AI interpretation for the current verified strategy state.")
     else:
