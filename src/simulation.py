@@ -17,6 +17,25 @@ def initialize_race_state() -> dict:
     return snapshot.model_dump(mode="json")
 
 
+def calculate_expected_lap_time(
+    fuel_level: float,
+    tire_temp: float,
+    track_condition: str,
+) -> float:
+    """Return the deterministic mean lap time before random lap-to-lap variation."""
+
+    if track_condition == "Dry":
+        base_lap_time = 84.5
+        fuel_load_penalty = fuel_level * 0.015
+        tire_temp_penalty = max(0, tire_temp - 100) * 0.08
+    else:
+        base_lap_time = 88.5
+        fuel_load_penalty = fuel_level * 0.02
+        tire_temp_penalty = max(0, tire_temp - 100) * 0.10
+
+    return round(base_lap_time + fuel_load_penalty + tire_temp_penalty, 2)
+
+
 def simulate_next_lap(previous: dict) -> dict:
     """Advance the simulation by one lap and validate the resulting telemetry."""
 
@@ -30,15 +49,14 @@ def simulate_next_lap(previous: dict) -> dict:
     tire_temp_change = random.randint(-1, 3)
     new_tire_temp = min(110, max(85, previous_snapshot.tire_temp + tire_temp_change))
 
-    if previous_snapshot.track_condition.value == "Dry":
-        base_lap_time = 84.5
-        lap_time_penalty = (100 - new_fuel) * 0.015 + max(0, new_tire_temp - 100) * 0.08
-    else:
-        base_lap_time = 88.5
-        lap_time_penalty = (100 - new_fuel) * 0.02 + max(0, new_tire_temp - 100) * 0.10
+    expected_lap_time = calculate_expected_lap_time(
+        fuel_level=new_fuel,
+        tire_temp=new_tire_temp,
+        track_condition=previous_snapshot.track_condition.value,
+    )
 
     new_lap_time = round(
-        base_lap_time + lap_time_penalty + random.uniform(-0.8, 0.8),
+        expected_lap_time + random.uniform(-0.8, 0.8),
         2,
     )
 
