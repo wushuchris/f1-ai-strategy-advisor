@@ -12,7 +12,7 @@ The application simulates lap-by-lap race telemetry including lap time, tire tem
 
 Three deterministic specialists independently assess tire state, pace behavior, and track conditions. A centralized orchestrator combines those outputs with a deterministic rules engine, and a verifier checks the resulting strategy before it is allowed to become the authoritative pit-wall recommendation.
 
-A Hugging Face-hosted LLM is intentionally downstream of that publication boundary. It explains the verified strategy in structured JSON, but it does not own routing, validation, escalation, or the final decision. The LLM interpretation layer is disabled whenever a specialist is operating in deterministic fallback mode.
+An LLM accessed through Hugging Face Inference Providers is intentionally downstream of that publication boundary. It explains the verified strategy in structured JSON, but it does not own routing, validation, escalation, or the final decision. Application-owned policy determines whether LLM interpretation is eligible to run, including verification status, specialist fallback state, minimum lap requirements, session limits, cooldowns, and same-state cache reuse.
 
 > **Models interpret. Application code validates, orchestrates, verifies, and publishes.**
 
@@ -30,12 +30,14 @@ A Hugging Face-hosted LLM is intentionally downstream of that publication bounda
 - Deterministic publication verifier with fail-closed consistency checks
 - Conservative specialist fallbacks when an analysis component fails
 - Typed `fallback_components` metadata for explicit degraded-mode observability
+- Application-owned, testable LLM eligibility policy
 - Structured LLM interpretation validated before display and suppressed during fallback mode
+- Same-state LLM response reuse with stale-response suppression after telemetry or strategy changes
 - Deterministic evaluation suite for known race-state scenarios
 - Automated pytest coverage through GitHub Actions
 - Streamlit Community Cloud deployment
 - Hugging Face token isolation through Streamlit secrets and fine-grained permissions
-- Session-level LLM rate limiting, cooldowns, and same-state response reuse
+- Session-level LLM rate limiting and cooldowns
 
 ---
 
@@ -59,6 +61,8 @@ Deterministic Strategy Verifier
         ↓
 Verified Pit-Wall Strategy
         ↓
+Application LLM Eligibility Policy
+        ↓
 ┌──────────────────────┐
 │ Streamlit Dashboard  │
 │ LLM Interpretation   │
@@ -78,6 +82,8 @@ Verified Pit-Wall Strategy
 - confidence propagation
 - final pit-wall recommendation
 - verification and publication gating
+- LLM eligibility policy
+- cache-state matching before previously generated interpretation is shown
 
 **The LLM contributes:**
 - concise explanation of the already-verified strategy
@@ -119,6 +125,8 @@ The system is designed so one model or specialist cannot silently become the dec
 - The verifier checks priority consistency, pit-action preservation, maintain-state safety, published confidence, and fallback publication policy.
 - The Streamlit dashboard visibly reports whether degraded mode is active and which specialist components are affected.
 - LLM interpretation is disabled during fallback mode so probabilistic explanation cannot obscure a degraded analytical state.
+- LLM eligibility is centralized in deterministic application policy rather than duplicated as UI-only control logic.
+- A previously generated interpretation is only shown when its state hash matches the current telemetry and verified strategy, preventing stale AI guidance from appearing under a newer pit-wall state.
 - The deterministic strategy remains available when Hugging Face inference is unavailable or malformed.
 
 ---
@@ -143,6 +151,8 @@ The model receives the verified orchestrated strategy and recent telemetry, then
 ```
 
 Malformed JSON, missing fields, and unexpected fields are rejected. LLM failure never replaces or invalidates the deterministic pit-wall strategy. The interpreter is also disabled whenever deterministic specialist fallback mode is active.
+
+A separate deterministic policy function controls whether an LLM request is allowed based on publication status, fallback state, lap threshold, per-session request budget, cooldown timing, and whether an identical verified state can reuse a cached response.
 
 ---
 
@@ -176,6 +186,7 @@ Regression tests also cover:
 - conservative fallback publication policy
 - multi-specialist failure containment
 - structured LLM response validation
+- deterministic LLM eligibility policy
 - simulated fuel-load and tire-temperature effects
 
 GitHub Actions runs the deterministic pytest suite on pushes and pull requests without requiring an `HF_TOKEN`.
@@ -203,8 +214,10 @@ GitHub Actions runs the deterministic pytest suite on pushes and pull requests w
 6. Aggregate validated evidence in the centralized orchestrator.
 7. Verify the proposed strategy against deterministic publication rules, including fallback-policy invariants.
 8. Publish the authoritative pit-wall strategy only if verification passes.
-9. Optionally request a structured LLM explanation only when no specialist fallback is active.
-10. Validate the LLM response before rendering it in the dashboard.
+9. Evaluate application-owned LLM eligibility policy.
+10. Optionally request a structured LLM explanation only when policy permits.
+11. Validate the LLM response before rendering it in the dashboard.
+12. Reuse a cached interpretation only when it still corresponds to the current verified strategy state.
 
 ---
 
@@ -236,6 +249,7 @@ f1-ai-strategy-advisor/
 │   ├── evaluation.py
 │   ├── llm.py
 │   ├── orchestrator.py
+│   ├── policy.py
 │   ├── rules.py
 │   ├── schemas.py
 │   ├── simulation.py
@@ -248,4 +262,4 @@ f1-ai-strategy-advisor/
 
 ## 🎯 Engineering Focus
 
-This project is primarily an exercise in governed AI systems rather than in maximizing the number of agents. The engineering emphasis is on clear authority boundaries, deterministic control, evidence-bounded reasoning, observable specialist outputs, safe fallbacks, structured model responses, regression evaluation, and cloud deployment.
+This project is primarily an exercise in governed AI systems rather than in maximizing the number of agents. The engineering emphasis is on clear authority boundaries, deterministic control, evidence-bounded reasoning, observable specialist outputs, safe fallbacks, testable LLM eligibility policy, structured model responses, regression evaluation, and cloud deployment.
