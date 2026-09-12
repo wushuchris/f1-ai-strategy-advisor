@@ -22,7 +22,7 @@ st.set_page_config(
 )
 
 st.title("🏎️ F1 AI Strategy Advisor")
-st.write("🚀 Real-time IoT telemetry + AI race strategy system")
+st.write("🚀 Simulated IoT telemetry + governed AI race strategy system")
 st.caption("AI interpretations are rate-limited in this public demo to manage inference usage.")
 
 # --- Session state initialization ---
