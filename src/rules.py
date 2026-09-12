@@ -14,15 +14,11 @@ def generate_strategy(data: dict) -> dict:
         priority = StrategyPriority.HIGH
 
     if telemetry.fuel_level <= 20:
-        actions.append("Fuel is low. Evaluate pit window and fuel-saving modes.")
+        actions.append("Fuel is low. Use fuel-saving modes and avoid unnecessary consumption.")
         priority = StrategyPriority.HIGH
 
     if telemetry.track_condition.value == "Wet":
         actions.append("Wet conditions detected. Review compound choice and reduce push laps.")
-        priority = StrategyPriority.HIGH
-
-    if telemetry.lap >= 20 and telemetry.tire_temp >= 100:
-        actions.append("Long stint degradation risk is rising. Consider a stop soon.")
         priority = StrategyPriority.HIGH
 
     if not actions:
