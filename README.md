@@ -12,7 +12,7 @@ The application simulates lap-by-lap race telemetry including lap time, tire tem
 
 Three deterministic specialists independently assess tire state, pace behavior, and track conditions. A centralized orchestrator combines those outputs with a deterministic rules engine, and a verifier checks the resulting strategy before it is allowed to become the authoritative pit-wall recommendation.
 
-A Hugging Face-hosted LLM is intentionally downstream of that publication boundary. It explains the verified strategy in structured JSON, but it does not own routing, validation, escalation, or the final decision.
+A Hugging Face-hosted LLM is intentionally downstream of that publication boundary. It explains the verified strategy in structured JSON, but it does not own routing, validation, escalation, or the final decision. The LLM interpretation layer is disabled whenever a specialist is operating in deterministic fallback mode.
 
 > **Models interpret. Application code validates, orchestrates, verifies, and publishes.**
 
@@ -29,7 +29,8 @@ A Hugging Face-hosted LLM is intentionally downstream of that publication bounda
 - Centralized strategy orchestrator that owns the final recommendation boundary
 - Deterministic publication verifier with fail-closed consistency checks
 - Conservative specialist fallbacks when an analysis component fails
-- Structured LLM interpretation validated before display
+- Typed `fallback_components` metadata for explicit degraded-mode observability
+- Structured LLM interpretation validated before display and suppressed during fallback mode
 - Deterministic evaluation suite for known race-state scenarios
 - Automated pytest coverage through GitHub Actions
 - Streamlit Community Cloud deployment
@@ -72,6 +73,7 @@ Verified Pit-Wall Strategy
 - valid strategy actions
 - routing and aggregation
 - failure fallbacks
+- degraded-mode metadata
 - publication priority
 - confidence propagation
 - final pit-wall recommendation
@@ -81,7 +83,7 @@ Verified Pit-Wall Strategy
 - concise explanation of the already-verified strategy
 - structured pit, pace, tire, risk, and overall guidance
 
-The LLM cannot directly change the application-owned final strategy action.
+The LLM cannot directly change the application-owned final strategy action and is not invoked while a specialist fallback is active.
 
 ---
 
@@ -111,9 +113,12 @@ The system is designed so one model or specialist cannot silently become the dec
 
 - Specialist outputs are schema-validated.
 - Specialist exceptions are contained with conservative deterministic fallbacks.
-- A failed specialist drives confidence to `0.0` and causes a conservative `Manage and Reassess` state rather than an unsupported pit recommendation.
+- Fallback use is recorded explicitly in typed `fallback_components` metadata rather than inferred from prose.
+- A failed specialist drives publication confidence to `0.0` and requires a conservative high-priority action rather than allowing `Maintain` or `Review Strategy` to publish.
 - `Prepare to Pit` can only be published when the Tire Analyst explicitly emits that bounded action.
-- The verifier checks priority consistency, pit-action preservation, maintain-state safety, and published confidence.
+- The verifier checks priority consistency, pit-action preservation, maintain-state safety, published confidence, and fallback publication policy.
+- The Streamlit dashboard visibly reports whether degraded mode is active and which specialist components are affected.
+- LLM interpretation is disabled during fallback mode so probabilistic explanation cannot obscure a degraded analytical state.
 - The deterministic strategy remains available when Hugging Face inference is unavailable or malformed.
 
 ---
@@ -137,13 +142,13 @@ The model receives the verified orchestrated strategy and recent telemetry, then
 }
 ```
 
-Malformed JSON, missing fields, and unexpected fields are rejected. LLM failure never replaces or invalidates the deterministic pit-wall strategy.
+Malformed JSON, missing fields, and unexpected fields are rejected. LLM failure never replaces or invalidates the deterministic pit-wall strategy. The interpreter is also disabled whenever deterministic specialist fallback mode is active.
 
 ---
 
 ## 🧪 Evaluation and Testing
 
-A deterministic evaluation suite exercises known operating conditions without using paid LLM inference. Current scenarios include:
+A deterministic evaluation suite exercises 11 known operating conditions without using paid LLM inference. Current scenarios include:
 
 - stable dry state
 - overheated tires
@@ -152,6 +157,10 @@ A deterministic evaluation suite exercises known operating conditions without us
 - pace degradation
 - critical pace loss
 - insufficient pace history
+- tire-management threshold
+- exact pace-degradation threshold
+- exact critical-pace threshold
+- late-race lap state without tire-age evidence
 
 The suite tracks scenario pass rate, publication rate, expected-action match rate, and expected-priority match rate.
 
@@ -163,7 +172,9 @@ Regression tests also cover:
 - same-condition pace baselines
 - orchestration precedence
 - publication verification
-- specialist failure containment
+- structured fallback-component metadata
+- conservative fallback publication policy
+- multi-specialist failure containment
 - structured LLM response validation
 - simulated fuel-load and tire-temperature effects
 
@@ -188,11 +199,11 @@ GitHub Actions runs the deterministic pytest suite on pushes and pull requests w
 2. Simulate the next lap with fuel burn, tire-temperature movement, track state, and lap-time variation.
 3. Validate telemetry through the application schema.
 4. Run deterministic Tire, Pace, and Track specialists plus the rules engine.
-5. Contain specialist failures with conservative application-owned fallbacks.
+5. Contain specialist failures with conservative application-owned fallbacks and record affected components explicitly.
 6. Aggregate validated evidence in the centralized orchestrator.
-7. Verify the proposed strategy against deterministic publication rules.
+7. Verify the proposed strategy against deterministic publication rules, including fallback-policy invariants.
 8. Publish the authoritative pit-wall strategy only if verification passes.
-9. Optionally request a structured LLM explanation of that verified strategy.
+9. Optionally request a structured LLM explanation only when no specialist fallback is active.
 10. Validate the LLM response before rendering it in the dashboard.
 
 ---
