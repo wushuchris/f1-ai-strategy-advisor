@@ -1,4 +1,4 @@
 streamlit
 pandas
 huggingface_hub
-pydantic
+pydantic>=2.0
