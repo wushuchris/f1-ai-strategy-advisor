@@ -146,12 +146,14 @@ st.caption(
 # --- Specialist evidence ---
 with st.expander("Specialist Analysis", expanded=True):
     st.markdown("#### Tire Analyst")
-    tire_col1, tire_col2, tire_col3 = st.columns(3)
-    tire_col1.metric("Degradation Risk", tire_assessment["risk"])
+    tire_col1, tire_col2 = st.columns(2)
+    tire_col1.metric("Tire Risk", tire_assessment["risk"])
     tire_col2.metric("Recommended Action", tire_assessment["action"])
-    tire_col3.metric("Estimated Laps Remaining", tire_assessment["estimated_remaining_laps"])
     st.write(tire_assessment["rationale"])
-    st.caption(f"Assessment confidence: {tire_assessment['confidence']:.0%}")
+    st.caption(
+        f"Assessment confidence: {tire_assessment['confidence']:.0%}. "
+        "The current telemetry does not model tire age, compound, or measured wear, so the system does not estimate remaining tire life."
+    )
 
     st.markdown("#### Pace Analyst")
     pace_col1, pace_col2, pace_col3, pace_col4 = st.columns(4)
