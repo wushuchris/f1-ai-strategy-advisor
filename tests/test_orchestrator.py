@@ -23,6 +23,7 @@ def test_stable_state_publishes_maintain():
     assert result["priority"] == "Normal"
     assert result["tire"]["risk"] == "Low"
     assert result["pace"]["status"] == "On Target"
+    assert result["track"]["risk"] == "Low"
     assert result["confidence"] == 0.90
 
 
@@ -40,6 +41,17 @@ def test_critical_pace_escalates_to_manage_and_reassess():
     assert result["final_action"] == "Manage and Reassess"
     assert result["priority"] == "High"
     assert result["pace"]["status"] == "Critical"
+
+
+def test_wet_track_escalates_to_manage_and_reassess():
+    result = run_strategy_orchestrator(
+        make_telemetry(track_condition="Wet", lap_time=89.5)
+    )
+
+    assert result["track"]["risk"] == "Elevated"
+    assert result["track"]["action"] == "Adapt to Wet Conditions"
+    assert result["final_action"] == "Manage and Reassess"
+    assert result["priority"] == "High"
 
 
 def test_high_priority_rules_escalate_without_forcing_pit():
