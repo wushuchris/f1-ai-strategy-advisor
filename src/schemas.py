@@ -165,3 +165,15 @@ class StrategyVerification(BaseModel):
     checks_run: int = Field(ge=1)
     violations: list[str]
     rationale: str = Field(min_length=1)
+
+
+class LLMStrategyInterpretation(BaseModel):
+    """Validated explanatory output from the LLM; never the authoritative strategy decision."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    pit_recommendation: str = Field(min_length=1)
+    pace_guidance: str = Field(min_length=1)
+    tire_guidance: str = Field(min_length=1)
+    risk_summary: str = Field(min_length=1)
+    overall_strategy: str = Field(min_length=1)
