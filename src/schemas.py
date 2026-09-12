@@ -49,6 +49,15 @@ class PaceAction(str, Enum):
     MANAGE = "Manage and Reassess"
 
 
+class StrategyAction(str, Enum):
+    """Application-owned final actions published by the strategy orchestrator."""
+
+    MAINTAIN = "Maintain"
+    REVIEW = "Review Strategy"
+    MANAGE = "Manage and Reassess"
+    PREPARE_TO_PIT = "Prepare to Pit"
+
+
 class TelemetrySnapshot(BaseModel):
     """Validated telemetry for one simulated race lap."""
 
@@ -93,3 +102,18 @@ class PaceAssessment(BaseModel):
     delta_to_target: float
     confidence: float = Field(ge=0.0, le=1.0)
     rationale: str = Field(min_length=1)
+
+
+class OrchestratedStrategy(BaseModel):
+    """Validated publication contract for the centralized strategy orchestrator."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    telemetry: TelemetrySnapshot
+    rules: RulesStrategy
+    tire: TireAssessment
+    pace: PaceAssessment
+    final_action: StrategyAction
+    priority: StrategyPriority
+    confidence: float = Field(ge=0.0, le=1.0)
+    summary: str = Field(min_length=1)
