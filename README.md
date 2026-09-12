@@ -1,5 +1,8 @@
 # 🏎️ F1 AI Strategy Advisor
 
+[![Tests](https://github.com/wushuchris/f1-ai-strategy-advisor/actions/workflows/tests.yml/badge.svg)](https://github.com/wushuchris/f1-ai-strategy-advisor/actions/workflows/tests.yml)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://f1-ai-strategy-advisor-ekkzao7ckhtbv3sfh5v4nd.streamlit.app/)
+
 A cloud-deployed Formula 1 strategy system that uses simulated IoT telemetry, deterministic specialist analysis, centralized orchestration, verification, and bounded LLM interpretation.
 
 The project began as an IoT/AI coursework concept and has been extended into a portfolio project focused on trustworthy agent engineering: typed contracts, application-owned control, failure containment, evaluation, CI, and observable decision boundaries.
