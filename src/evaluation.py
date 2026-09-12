@@ -52,6 +52,13 @@ def build_evaluation_scenarios() -> list[EvaluationScenario]:
             expected_priority="Normal",
         ),
         EvaluationScenario(
+            name="tire_management_threshold",
+            history=dry_history,
+            current=_telemetry(4, 85.2, tire_temp=100.0),
+            expected_action="Review Strategy",
+            expected_priority="Normal",
+        ),
+        EvaluationScenario(
             name="overheated_tires",
             history=dry_history,
             current=_telemetry(4, 85.2, tire_temp=105.0),
@@ -80,6 +87,13 @@ def build_evaluation_scenarios() -> list[EvaluationScenario]:
             expected_priority="Normal",
         ),
         EvaluationScenario(
+            name="exact_pace_degradation_threshold",
+            history=dry_history,
+            current=_telemetry(4, 85.75),
+            expected_action="Review Strategy",
+            expected_priority="Normal",
+        ),
+        EvaluationScenario(
             name="critical_pace_loss",
             history=dry_history,
             current=_telemetry(4, 86.6),
@@ -87,9 +101,27 @@ def build_evaluation_scenarios() -> list[EvaluationScenario]:
             expected_priority="High",
         ),
         EvaluationScenario(
+            name="exact_critical_pace_threshold",
+            history=dry_history,
+            current=_telemetry(4, 86.5),
+            expected_action="Manage and Reassess",
+            expected_priority="High",
+        ),
+        EvaluationScenario(
             name="insufficient_pace_history",
             history=[_telemetry(1, 85.0)],
             current=_telemetry(2, 85.1),
+            expected_action="Maintain",
+            expected_priority="Normal",
+        ),
+        EvaluationScenario(
+            name="late_race_lap_without_tire_age_evidence",
+            history=[
+                _telemetry(22, 85.0, tire_temp=99.0),
+                _telemetry(23, 85.1, tire_temp=99.0),
+                _telemetry(24, 84.9, tire_temp=99.0),
+            ],
+            current=_telemetry(25, 85.2, tire_temp=99.0),
             expected_action="Maintain",
             expected_priority="Normal",
         ),
