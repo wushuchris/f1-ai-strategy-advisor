@@ -18,7 +18,7 @@ from src.schemas import (
 )
 
 
-def run_strategy_orchestrator(data: dict) -> dict:
+def run_strategy_orchestrator(data: dict, history: list[dict] | None = None) -> dict:
     """Run specialist analysis and publish one application-governed strategy state."""
 
     telemetry = TelemetrySnapshot.model_validate(data)
@@ -26,7 +26,7 @@ def run_strategy_orchestrator(data: dict) -> dict:
 
     rules = RulesStrategy.model_validate(generate_strategy(telemetry_data))
     tire = TireAssessment.model_validate(analyze_tires(telemetry_data))
-    pace = PaceAssessment.model_validate(analyze_pace(telemetry_data))
+    pace = PaceAssessment.model_validate(analyze_pace(telemetry_data, history=history))
     track = TrackAssessment.model_validate(analyze_track(telemetry_data))
 
     if tire.action == TireAction.PREPARE_TO_PIT:
@@ -58,10 +58,16 @@ def run_strategy_orchestrator(data: dict) -> dict:
     else:
         final_action = StrategyAction.MAINTAIN
         priority = StrategyPriority.NORMAL
-        summary = (
-            "Specialist assessments are stable and no high-priority rule is active. "
-            "Maintain the current strategy and continue monitoring telemetry."
-        )
+        if pace.status == PaceStatus.MONITORING:
+            summary = (
+                "No high-priority constraint is active, but the pace analyst is still building a "
+                "recent-lap baseline. Maintain the current strategy and continue collecting telemetry."
+            )
+        else:
+            summary = (
+                "Specialist assessments are stable and no high-priority rule is active. "
+                "Maintain the current strategy and continue monitoring telemetry."
+            )
 
     strategy = OrchestratedStrategy(
         telemetry=telemetry,
