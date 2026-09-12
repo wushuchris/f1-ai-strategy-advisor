@@ -4,6 +4,7 @@ from src.agents.track_agent import analyze_track
 from src.rules import generate_strategy
 from src.schemas import (
     OrchestratedStrategy,
+    PaceAction,
     PaceAssessment,
     PaceStatus,
     RulesStrategy,
@@ -13,9 +14,59 @@ from src.schemas import (
     TireAction,
     TireAssessment,
     TireRisk,
+    TrackAction,
     TrackAssessment,
     TrackRisk,
 )
+
+
+def _run_tire_analysis(telemetry_data: dict) -> TireAssessment:
+    try:
+        return TireAssessment.model_validate(analyze_tires(telemetry_data))
+    except Exception:
+        return TireAssessment(
+            risk=TireRisk.HIGH,
+            action=TireAction.MANAGE,
+            confidence=0.0,
+            rationale=(
+                "Tire specialist analysis failed. A conservative deterministic fallback is active, "
+                "so the car should be managed and the tire state reassessed before escalation."
+            ),
+        )
+
+
+def _run_pace_analysis(telemetry_data: dict, history: list[dict] | None) -> PaceAssessment:
+    try:
+        return PaceAssessment.model_validate(analyze_pace(telemetry_data, history=history))
+    except Exception:
+        return PaceAssessment(
+            status=PaceStatus.CRITICAL,
+            action=PaceAction.MANAGE,
+            reference_lap_time=telemetry_data["lap_time"],
+            delta_to_reference=0.0,
+            history_laps=0,
+            confidence=0.0,
+            rationale=(
+                "Pace specialist analysis failed. A conservative deterministic fallback is active, "
+                "so the car should be managed while pace evidence is rebuilt."
+            ),
+        )
+
+
+def _run_track_analysis(telemetry_data: dict) -> TrackAssessment:
+    try:
+        return TrackAssessment.model_validate(analyze_track(telemetry_data))
+    except Exception:
+        return TrackAssessment(
+            condition=telemetry_data["track_condition"],
+            risk=TrackRisk.ELEVATED,
+            action=TrackAction.ADAPT_TO_WET,
+            confidence=0.0,
+            rationale=(
+                "Track-condition specialist analysis failed. A conservative deterministic fallback "
+                "is active, so the strategy should be managed until the surface state is reassessed."
+            ),
+        )
 
 
 def run_strategy_orchestrator(data: dict, history: list[dict] | None = None) -> dict:
@@ -25,9 +76,9 @@ def run_strategy_orchestrator(data: dict, history: list[dict] | None = None) -> 
     telemetry_data = telemetry.model_dump(mode="json")
 
     rules = RulesStrategy.model_validate(generate_strategy(telemetry_data))
-    tire = TireAssessment.model_validate(analyze_tires(telemetry_data))
-    pace = PaceAssessment.model_validate(analyze_pace(telemetry_data, history=history))
-    track = TrackAssessment.model_validate(analyze_track(telemetry_data))
+    tire = _run_tire_analysis(telemetry_data)
+    pace = _run_pace_analysis(telemetry_data, history)
+    track = _run_track_analysis(telemetry_data)
 
     if tire.action == TireAction.PREPARE_TO_PIT:
         final_action = StrategyAction.PREPARE_TO_PIT
