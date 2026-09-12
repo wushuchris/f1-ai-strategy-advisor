@@ -70,6 +70,21 @@ def verify_strategy(strategy_data: dict) -> dict:
             "Published confidence must equal the lowest confidence across all specialist assessments."
         )
 
+    checks_run += 1
+    if strategy.fallback_components:
+        if strategy.final_action != StrategyAction.MANAGE:
+            violations.append(
+                "Active specialist fallback requires the final action Manage and Reassess."
+            )
+        if strategy.priority != StrategyPriority.HIGH:
+            violations.append(
+                "Active specialist fallback requires High publication priority."
+            )
+        if abs(strategy.confidence) > 1e-9:
+            violations.append(
+                "Active specialist fallback requires zero published confidence."
+            )
+
     if violations:
         verification = StrategyVerification(
             status=VerificationStatus.REJECTED,
