@@ -11,6 +11,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from src.simulation import initialize_race_state, simulate_next_lap
 from src.rules import generate_strategy
 from src.llm import generate_llm_strategy
+from src.agents.tire_agent import analyze_tires
 
 st.set_page_config(
     page_title="F1 AI Strategy Advisor",
@@ -78,6 +79,7 @@ if len(st.session_state.history) > 50:
 data = st.session_state.history[-1]
 df = pd.DataFrame(st.session_state.history)
 rules_strategy = generate_strategy(data)
+tire_assessment = analyze_tires(data)
 
 # --- Metrics ---
 col1, col2, col3, col4 = st.columns(4)
@@ -97,6 +99,17 @@ st.line_chart(df.set_index("lap")["lap_time"])
 
 st.subheader("Fuel Level Trend")
 st.line_chart(df.set_index("lap")["fuel_level"])
+
+# --- Tire analyst ---
+st.subheader("Tire Analyst")
+
+tire_col1, tire_col2, tire_col3 = st.columns(3)
+tire_col1.metric("Degradation Risk", tire_assessment["risk"])
+tire_col2.metric("Recommended Action", tire_assessment["action"])
+tire_col3.metric("Estimated Laps Remaining", tire_assessment["estimated_remaining_laps"])
+
+st.write(tire_assessment["rationale"])
+st.caption(f"Assessment confidence: {tire_assessment['confidence']:.0%}")
 
 # --- Rules strategy ---
 st.subheader("Rules-Based Strategy Recommendation")
