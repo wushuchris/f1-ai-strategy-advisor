@@ -38,7 +38,7 @@ def test_valid_orchestrated_strategy_is_approved():
     assert result["status"] == "Approved"
     assert result["publishable"] is True
     assert result["violations"] == []
-    assert result["checks_run"] == 6
+    assert result["checks_run"] == 7
 
 
 def test_monitoring_pace_state_can_be_approved_with_lower_confidence():
@@ -140,6 +140,51 @@ def test_tampered_confidence_is_rejected():
 
     assert result["status"] == "Rejected"
     assert any("Published confidence" in item for item in result["violations"])
+
+
+def test_valid_fallback_strategy_is_approved(monkeypatch):
+    def fail_tire(_):
+        raise RuntimeError("simulated tire specialist failure")
+
+    monkeypatch.setattr("src.orchestrator.analyze_tires", fail_tire)
+    strategy = run_strategy_orchestrator(make_telemetry(), history=make_history())
+
+    result = verify_strategy(strategy)
+
+    assert strategy["fallback_components"] == ["Tire"]
+    assert strategy["final_action"] == "Manage and Reassess"
+    assert strategy["priority"] == "High"
+    assert strategy["confidence"] == 0.0
+    assert result["status"] == "Approved"
+    assert result["publishable"] is True
+
+
+def test_fallback_component_cannot_publish_non_manage_action(monkeypatch):
+    def fail_tire(_):
+        raise RuntimeError("simulated tire specialist failure")
+
+    monkeypatch.setattr("src.orchestrator.analyze_tires", fail_tire)
+    strategy = run_strategy_orchestrator(make_telemetry(), history=make_history())
+    strategy["final_action"] = "Review Strategy"
+
+    result = verify_strategy(strategy)
+
+    assert result["status"] == "Rejected"
+    assert any("fallback requires the final action" in item for item in result["violations"])
+
+
+def test_fallback_component_cannot_publish_nonzero_confidence(monkeypatch):
+    def fail_track(_):
+        raise RuntimeError("simulated track specialist failure")
+
+    monkeypatch.setattr("src.orchestrator.analyze_track", fail_track)
+    strategy = run_strategy_orchestrator(make_telemetry(), history=make_history())
+    strategy["confidence"] = 0.50
+
+    result = verify_strategy(strategy)
+
+    assert result["status"] == "Rejected"
+    assert any("fallback requires zero published confidence" in item for item in result["violations"])
 
 
 def test_invalid_orchestrated_strategy_schema_is_rejected_before_verification():
