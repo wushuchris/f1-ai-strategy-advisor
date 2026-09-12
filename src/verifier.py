@@ -6,6 +6,7 @@ from src.schemas import (
     StrategyVerification,
     TireAction,
     TireRisk,
+    TrackRisk,
     VerificationStatus,
 )
 
@@ -33,6 +34,7 @@ def verify_strategy(strategy_data: dict) -> dict:
     high_priority_signal = (
         strategy.tire.risk == TireRisk.HIGH
         or strategy.pace.status == PaceStatus.CRITICAL
+        or strategy.track.risk == TrackRisk.ELEVATED
         or strategy.rules.priority == StrategyPriority.HIGH
     )
     if high_priority_signal and strategy.priority != StrategyPriority.HIGH:
@@ -46,15 +48,20 @@ def verify_strategy(strategy_data: dict) -> dict:
     if strategy.final_action == StrategyAction.MAINTAIN and (
         strategy.tire.risk != TireRisk.LOW
         or strategy.pace.status != PaceStatus.ON_TARGET
+        or strategy.track.risk != TrackRisk.LOW
         or strategy.rules.priority != StrategyPriority.NORMAL
     ):
         violations.append("Maintain may only be published when all bounded inputs are stable.")
 
     checks_run += 1
-    expected_confidence = min(strategy.tire.confidence, strategy.pace.confidence)
+    expected_confidence = min(
+        strategy.tire.confidence,
+        strategy.pace.confidence,
+        strategy.track.confidence,
+    )
     if abs(strategy.confidence - expected_confidence) > 1e-9:
         violations.append(
-            "Published confidence must equal the lower confidence of the tire and pace specialists."
+            "Published confidence must equal the lowest confidence across all specialist assessments."
         )
 
     if violations:
