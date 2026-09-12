@@ -21,7 +21,7 @@ st.set_page_config(
 
 st.title("🏎️ F1 AI Strategy Advisor")
 st.write("🚀 Real-time IoT telemetry + AI race strategy system")
-st.caption("AI recommendations are rate-limited in this public demo to manage inference usage.")
+st.caption("AI interpretations are rate-limited in this public demo to manage inference usage.")
 
 # --- Session state initialization ---
 if "history" not in st.session_state:
@@ -59,6 +59,39 @@ def build_state_hash(
         "verification": verification,
     }
     return hashlib.sha256(str(payload).encode("utf-8")).hexdigest()
+
+
+def render_llm_interpretation(result: dict) -> None:
+    """Render only validated structured LLM output; deterministic strategy remains authoritative."""
+
+    if not result["ok"]:
+        st.warning(result["error"])
+        st.caption(
+            "The AI interpretation is unavailable, but the verified deterministic pit-wall strategy remains authoritative."
+        )
+        return
+
+    interpretation = result["interpretation"]
+
+    st.markdown("#### AI Interpretation")
+    st.caption(
+        "This section explains the verified pit-wall strategy. It does not replace or override the application-owned decision."
+    )
+
+    st.markdown("**Pit Recommendation**")
+    st.write(interpretation["pit_recommendation"])
+
+    st.markdown("**Pace Guidance**")
+    st.write(interpretation["pace_guidance"])
+
+    st.markdown("**Tire Guidance**")
+    st.write(interpretation["tire_guidance"])
+
+    st.markdown("**Risk Summary**")
+    st.write(interpretation["risk_summary"])
+
+    st.markdown("**Overall Strategy**")
+    st.write(interpretation["overall_strategy"])
 
 
 # --- Controls ---
@@ -187,7 +220,7 @@ with st.expander("Specialist Analysis", expanded=True):
     st.write(rules_strategy["recommendation"])
 
 # --- LLM safeguards status ---
-st.subheader("LLM Strategy Advisor")
+st.subheader("LLM Strategy Interpreter")
 
 calls_remaining = MAX_LLM_CALLS_PER_SESSION - st.session_state.llm_calls_used
 elapsed = time.time() - st.session_state.last_llm_call_time
@@ -203,46 +236,41 @@ current_state_hash = build_state_hash(data, df, orchestrated_strategy, verificat
 llm_disabled_reason = None
 
 if not verification["publishable"]:
-    llm_disabled_reason = "AI strategy generation is disabled because the deterministic pit-wall strategy failed verification."
+    llm_disabled_reason = "AI interpretation is disabled because the deterministic pit-wall strategy failed verification."
 elif data["lap"] < MIN_LAPS_FOR_LLM:
-    llm_disabled_reason = f"Simulate to at least lap {MIN_LAPS_FOR_LLM} before generating an AI recommendation."
+    llm_disabled_reason = f"Simulate to at least lap {MIN_LAPS_FOR_LLM} before generating an AI interpretation."
 elif st.session_state.llm_calls_used >= MAX_LLM_CALLS_PER_SESSION:
-    llm_disabled_reason = "Session limit reached for AI recommendations. Reset the simulation to start over."
+    llm_disabled_reason = "Session limit reached for AI interpretations. Reset the simulation to start over."
 elif cooldown_remaining > 0 and st.session_state.last_llm_state_hash != current_state_hash:
-    llm_disabled_reason = f"Please wait {cooldown_remaining} seconds before generating another new AI recommendation."
+    llm_disabled_reason = f"Please wait {cooldown_remaining} seconds before generating another new AI interpretation."
 
 if llm_disabled_reason:
     st.caption(llm_disabled_reason)
 
 generate_clicked = st.button(
-    "Generate AI Strategy Recommendation",
+    "Generate AI Strategy Interpretation",
     disabled=llm_disabled_reason is not None
 )
 
 if generate_clicked:
-    # Reuse cached output if telemetry state is unchanged
+    # Reuse cached output if telemetry and verified strategy state are unchanged.
     if st.session_state.last_llm_state_hash == current_state_hash and st.session_state.last_llm_response:
-        llm_text = st.session_state.last_llm_response
-        st.info("Using cached AI recommendation for the current telemetry state.")
+        llm_result = st.session_state.last_llm_response
+        st.info("Using cached AI interpretation for the current verified strategy state.")
     else:
-        with st.spinner("Generating AI strategy..."):
-            llm_text = generate_llm_strategy(data, df, rules_strategy)
+        with st.spinner("Generating AI interpretation..."):
+            llm_result = generate_llm_strategy(data, df, orchestrated_strategy)
 
         st.session_state.last_llm_call_time = time.time()
         st.session_state.llm_calls_used += 1
         st.session_state.last_llm_state_hash = current_state_hash
-        st.session_state.last_llm_response = llm_text
+        st.session_state.last_llm_response = llm_result
 
-    st.text_area("AI Strategy Output", llm_text, height=220)
+    render_llm_interpretation(llm_result)
 
-# Keep showing last response after reruns
+# Keep showing the last validated interpretation after reruns.
 if st.session_state.last_llm_response:
-    with st.expander("Most Recent AI Strategy Output", expanded=False):
-        st.text_area(
-            "Last AI Recommendation",
-            st.session_state.last_llm_response,
-            height=220,
-            key="last_ai_output_display"
-        )
+    with st.expander("Most Recent AI Interpretation", expanded=False):
+        render_llm_interpretation(st.session_state.last_llm_response)
 
 st.success("Telemetry system active")
