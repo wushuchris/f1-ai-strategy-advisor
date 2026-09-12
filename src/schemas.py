@@ -58,6 +58,13 @@ class StrategyAction(str, Enum):
     PREPARE_TO_PIT = "Prepare to Pit"
 
 
+class VerificationStatus(str, Enum):
+    """Application-owned publication verification states."""
+
+    APPROVED = "Approved"
+    REJECTED = "Rejected"
+
+
 class TelemetrySnapshot(BaseModel):
     """Validated telemetry for one simulated race lap."""
 
@@ -117,3 +124,15 @@ class OrchestratedStrategy(BaseModel):
     priority: StrategyPriority
     confidence: float = Field(ge=0.0, le=1.0)
     summary: str = Field(min_length=1)
+
+
+class StrategyVerification(BaseModel):
+    """Validated decision produced by the publication verifier."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: VerificationStatus
+    publishable: bool
+    checks_run: int = Field(ge=1)
+    violations: list[str]
+    rationale: str = Field(min_length=1)
