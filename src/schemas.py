@@ -36,6 +36,7 @@ class TireAction(str, Enum):
 class PaceStatus(str, Enum):
     """Application-owned pace performance states."""
 
+    MONITORING = "Monitoring"
     ON_TARGET = "On Target"
     DEGRADED = "Degraded"
     CRITICAL = "Critical"
@@ -44,6 +45,7 @@ class PaceStatus(str, Enum):
 class PaceAction(str, Enum):
     """Bounded pace-management actions emitted by the pace analyst."""
 
+    MONITOR = "Monitor"
     MAINTAIN = "Maintain"
     REVIEW = "Review Pace Loss"
     MANAGE = "Manage and Reassess"
@@ -112,14 +114,15 @@ class TireAssessment(BaseModel):
 
 
 class PaceAssessment(BaseModel):
-    """Validated output contract for deterministic pace analysis."""
+    """Validated output contract for deterministic trend-based pace analysis."""
 
     model_config = ConfigDict(extra="forbid")
 
     status: PaceStatus
     action: PaceAction
-    target_lap_time: float = Field(gt=0)
-    delta_to_target: float
+    reference_lap_time: float = Field(gt=0)
+    delta_to_reference: float
+    history_laps: int = Field(ge=0)
     confidence: float = Field(ge=0.0, le=1.0)
     rationale: str = Field(min_length=1)
 
