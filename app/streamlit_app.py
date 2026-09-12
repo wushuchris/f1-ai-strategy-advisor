@@ -12,6 +12,7 @@ from src.simulation import initialize_race_state, simulate_next_lap
 from src.llm import generate_llm_strategy
 from src.orchestrator import run_strategy_orchestrator
 from src.verifier import verify_strategy
+from src.evaluation import run_evaluation_suite
 
 st.set_page_config(
     page_title="F1 AI Strategy Advisor",
@@ -218,6 +219,35 @@ with st.expander("Specialist Analysis", expanded=True):
     else:
         st.info(f"Priority: {rules_strategy['priority']}")
     st.write(rules_strategy["recommendation"])
+
+# --- Deterministic evaluation visibility ---
+with st.expander("Deterministic Evaluation", expanded=False):
+    evaluation = run_evaluation_suite()
+    evaluation_metrics = evaluation["metrics"]
+
+    eval_col1, eval_col2, eval_col3, eval_col4 = st.columns(4)
+    eval_col1.metric(
+        "Scenario Pass Rate",
+        f"{evaluation_metrics['scenario_pass_rate']:.0%}",
+    )
+    eval_col2.metric(
+        "Publishable Rate",
+        f"{evaluation_metrics['publishable_rate']:.0%}",
+    )
+    eval_col3.metric(
+        "Action Match Rate",
+        f"{evaluation_metrics['expected_action_match_rate']:.0%}",
+    )
+    eval_col4.metric(
+        "Priority Match Rate",
+        f"{evaluation_metrics['expected_priority_match_rate']:.0%}",
+    )
+
+    st.dataframe(pd.DataFrame(evaluation["results"]), use_container_width=True)
+    st.caption(
+        "These are deterministic regression scenarios executed without any LLM calls. "
+        "They are engineering checks for expected bounded behavior, not claims of real-world race accuracy."
+    )
 
 # --- LLM safeguards status ---
 st.subheader("LLM Strategy Interpreter")
