@@ -17,6 +17,22 @@ class StrategyPriority(str, Enum):
     HIGH = "High"
 
 
+class TireRisk(str, Enum):
+    """Application-owned tire degradation risk levels."""
+
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+
+
+class TireAction(str, Enum):
+    """Bounded tire-management actions emitted by the tire analyst."""
+
+    MAINTAIN = "Maintain"
+    MANAGE = "Manage"
+    PREPARE_TO_PIT = "Prepare to Pit"
+
+
 class TelemetrySnapshot(BaseModel):
     """Validated telemetry for one simulated race lap."""
 
@@ -36,3 +52,15 @@ class RulesStrategy(BaseModel):
 
     priority: StrategyPriority
     recommendation: str = Field(min_length=1)
+
+
+class TireAssessment(BaseModel):
+    """Validated output contract for deterministic tire analysis."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    risk: TireRisk
+    action: TireAction
+    estimated_remaining_laps: int = Field(ge=0)
+    confidence: float = Field(ge=0.0, le=1.0)
+    rationale: str = Field(min_length=1)
