@@ -107,7 +107,6 @@ class TireAssessment(BaseModel):
 
     risk: TireRisk
     action: TireAction
-    estimated_remaining_laps: int = Field(ge=0)
     confidence: float = Field(ge=0.0, le=1.0)
     rationale: str = Field(min_length=1)
 
