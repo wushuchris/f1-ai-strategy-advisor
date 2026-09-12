@@ -89,6 +89,7 @@ verification = verify_strategy(orchestrated_strategy)
 rules_strategy = orchestrated_strategy["rules"]
 tire_assessment = orchestrated_strategy["tire"]
 pace_assessment = orchestrated_strategy["pace"]
+track_assessment = orchestrated_strategy["track"]
 
 # --- Metrics ---
 col1, col2, col3, col4 = st.columns(4)
@@ -160,6 +161,14 @@ with st.expander("Specialist Analysis", expanded=True):
     pace_col4.metric("Delta to Target (s)", pace_assessment["delta_to_target"])
     st.write(pace_assessment["rationale"])
     st.caption(f"Assessment confidence: {pace_assessment['confidence']:.0%}")
+
+    st.markdown("#### Track Conditions Analyst")
+    track_col1, track_col2, track_col3 = st.columns(3)
+    track_col1.metric("Observed Condition", track_assessment["condition"])
+    track_col2.metric("Operational Risk", track_assessment["risk"])
+    track_col3.metric("Recommended Action", track_assessment["action"])
+    st.write(track_assessment["rationale"])
+    st.caption(f"Assessment confidence: {track_assessment['confidence']:.0%}")
 
     st.markdown("#### Rules Engine")
     if rules_strategy["priority"] == "High":
