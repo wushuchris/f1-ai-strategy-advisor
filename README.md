@@ -4,18 +4,18 @@ A cloud-deployed Formula 1 strategy system that uses simulated IoT telemetry, de
 
 The project began as an IoT/AI coursework concept and has been extended into a portfolio project focused on trustworthy agent engineering: typed contracts, application-owned control, failure containment, evaluation, CI, and observable decision boundaries.
 
-**Live demo:** https://f1-ai-strategy-advisor-ekkzao7ckhtbv3sfh5v4nd.streamlit.app/
+---
 
-## Portfolio Snapshot
+## 📌 Portfolio Snapshot
 
-- **Engineering pattern:** governed multi-agent system with centralized orchestration and deterministic publication control
-- **Specialists:** Tire Analyst, trend-aware Pace Analyst, and Track Conditions Analyst
-- **Reliability:** typed contracts, fail-closed verification, conservative specialist fallback, and explicit degraded-mode metadata
-- **AI boundary:** the LLM explains a verified strategy but cannot publish or override the pit-wall decision
-- **Evaluation:** 11 deterministic regression scenarios plus pytest coverage in GitHub Actions
-- **Deployment:** Streamlit Community Cloud with Hugging Face Inference Providers and secret-isolated runtime credentials
-
-> **Models interpret. Application code validates, orchestrates, verifies, and publishes.**
+- **System:** Governed multi-agent race-strategy advisor
+- **Specialists:** Tire, Pace, and Track Conditions analysts
+- **Control:** Centralized orchestrator + deterministic publication verifier
+- **Reliability:** Conservative specialist fallbacks, degraded-mode observability, regression scenarios, CI
+- **LLM role:** Structured interpretation of an already-verified strategy; never the publication authority
+- **Deployment:** Streamlit Community Cloud with Hugging Face Inference Providers
+- **Live demo:** https://f1-ai-strategy-advisor-ekkzao7ckhtbv3sfh5v4nd.streamlit.app/
+- **Concise project brief:** [`PORTFOLIO.md`](PORTFOLIO.md)
 
 ---
 
@@ -26,6 +26,8 @@ The application simulates lap-by-lap race telemetry including lap time, tire tem
 Three deterministic specialists independently assess tire state, pace behavior, and track conditions. A centralized orchestrator combines those outputs with a deterministic rules engine, and a verifier checks the resulting strategy before it is allowed to become the authoritative pit-wall recommendation.
 
 An LLM accessed through Hugging Face Inference Providers is intentionally downstream of that publication boundary. It explains the verified strategy in structured JSON, but it does not own routing, validation, escalation, or the final decision. Application-owned policy determines whether LLM interpretation is eligible to run, including verification status, specialist fallback state, minimum lap requirements, session limits, cooldowns, and same-state cache reuse.
+
+> **Models interpret. Application code validates, orchestrates, verifies, and publishes.**
 
 ---
 
@@ -266,6 +268,7 @@ f1-ai-strategy-advisor/
 │   ├── simulation.py
 │   └── verifier.py
 ├── tests/
+├── PORTFOLIO.md
 └── requirements-dev.txt
 ```
 
