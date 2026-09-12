@@ -39,6 +39,7 @@ def test_stable_state_publishes_maintain():
     assert result["pace"]["reference_lap_time"] == 85.2
     assert result["track"]["risk"] == "Low"
     assert result["confidence"] == 0.90
+    assert result["fallback_components"] == []
 
 
 def test_insufficient_pace_history_can_publish_bounded_maintain():
@@ -52,6 +53,7 @@ def test_insufficient_pace_history_can_publish_bounded_maintain():
     assert result["priority"] == "Normal"
     assert result["confidence"] == 0.60
     assert "baseline" in result["summary"].lower()
+    assert result["fallback_components"] == []
 
 
 def test_tire_pit_signal_controls_final_action():
@@ -122,6 +124,7 @@ def test_tire_specialist_failure_uses_conservative_fallback(monkeypatch):
     assert result["tire"]["action"] == "Manage"
     assert result["tire"]["confidence"] == 0.0
     assert "fallback" in result["tire"]["rationale"].lower()
+    assert result["fallback_components"] == ["Tire"]
     assert result["final_action"] == "Manage and Reassess"
     assert result["priority"] == "High"
 
@@ -138,6 +141,7 @@ def test_pace_specialist_failure_uses_conservative_fallback(monkeypatch):
     assert result["pace"]["action"] == "Manage and Reassess"
     assert result["pace"]["confidence"] == 0.0
     assert "fallback" in result["pace"]["rationale"].lower()
+    assert result["fallback_components"] == ["Pace"]
     assert result["final_action"] == "Manage and Reassess"
     assert result["priority"] == "High"
 
@@ -155,6 +159,25 @@ def test_track_specialist_failure_uses_neutral_reassessment_fallback(monkeypatch
     assert result["track"]["action"] == "Reassess Track State"
     assert result["track"]["confidence"] == 0.0
     assert "fallback" in result["track"]["rationale"].lower()
+    assert result["fallback_components"] == ["Track"]
+    assert result["final_action"] == "Manage and Reassess"
+    assert result["priority"] == "High"
+
+
+def test_multiple_specialist_failures_are_recorded(monkeypatch):
+    def fail_tire(_):
+        raise RuntimeError("simulated tire specialist failure")
+
+    def fail_track(_):
+        raise RuntimeError("simulated track specialist failure")
+
+    monkeypatch.setattr("src.orchestrator.analyze_tires", fail_tire)
+    monkeypatch.setattr("src.orchestrator.analyze_track", fail_track)
+
+    result = run_strategy_orchestrator(make_telemetry(), history=make_history())
+
+    assert result["fallback_components"] == ["Tire", "Track"]
+    assert result["confidence"] == 0.0
     assert result["final_action"] == "Manage and Reassess"
     assert result["priority"] == "High"
 
