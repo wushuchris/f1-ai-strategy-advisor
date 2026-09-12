@@ -11,6 +11,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from src.simulation import initialize_race_state, simulate_next_lap
 from src.llm import generate_llm_strategy
 from src.orchestrator import run_strategy_orchestrator
+from src.verifier import verify_strategy
 
 st.set_page_config(
     page_title="F1 AI Strategy Advisor",
@@ -45,11 +46,17 @@ LLM_COOLDOWN_SECONDS = 30
 MAX_LLM_CALLS_PER_SESSION = 5
 
 
-def build_state_hash(current_data: dict, history_df: pd.DataFrame, orchestrated_strategy: dict) -> str:
+def build_state_hash(
+    current_data: dict,
+    history_df: pd.DataFrame,
+    orchestrated_strategy: dict,
+    verification: dict,
+) -> str:
     payload = {
         "current_data": current_data,
         "recent_history": history_df.tail(5).to_dict(orient="records"),
         "orchestrated_strategy": orchestrated_strategy,
+        "verification": verification,
     }
     return hashlib.sha256(str(payload).encode("utf-8")).hexdigest()
 
@@ -78,6 +85,7 @@ if len(st.session_state.history) > 50:
 data = st.session_state.history[-1]
 df = pd.DataFrame(st.session_state.history)
 orchestrated_strategy = run_strategy_orchestrator(data)
+verification = verify_strategy(orchestrated_strategy)
 rules_strategy = orchestrated_strategy["rules"]
 tire_assessment = orchestrated_strategy["tire"]
 pace_assessment = orchestrated_strategy["pace"]
@@ -101,21 +109,36 @@ st.line_chart(df.set_index("lap")["lap_time"])
 st.subheader("Fuel Level Trend")
 st.line_chart(df.set_index("lap")["fuel_level"])
 
-# --- Authoritative orchestrated strategy ---
+# --- Verified publication boundary ---
 st.subheader("Pit Wall Strategy")
 
-strategy_col1, strategy_col2, strategy_col3 = st.columns(3)
-strategy_col1.metric("Final Action", orchestrated_strategy["final_action"])
-strategy_col2.metric("Priority", orchestrated_strategy["priority"])
-strategy_col3.metric("Confidence", f"{orchestrated_strategy['confidence']:.0%}")
+verification_col1, verification_col2 = st.columns(2)
+verification_col1.metric("Verification", verification["status"])
+verification_col2.metric("Checks Run", verification["checks_run"])
 
-if orchestrated_strategy["priority"] == "High":
-    st.warning(orchestrated_strategy["summary"])
+if verification["publishable"]:
+    strategy_col1, strategy_col2, strategy_col3 = st.columns(3)
+    strategy_col1.metric("Final Action", orchestrated_strategy["final_action"])
+    strategy_col2.metric("Priority", orchestrated_strategy["priority"])
+    strategy_col3.metric("Confidence", f"{orchestrated_strategy['confidence']:.0%}")
+
+    if orchestrated_strategy["priority"] == "High":
+        st.warning(orchestrated_strategy["summary"])
+    else:
+        st.success(orchestrated_strategy["summary"])
+
+    st.caption(verification["rationale"])
 else:
-    st.success(orchestrated_strategy["summary"])
+    st.error(
+        "Strategy publication blocked. The verifier rejected the orchestrated strategy, "
+        "so no authoritative pit-wall action will be published."
+    )
+    st.write(verification["rationale"])
+    for violation in verification["violations"]:
+        st.write(f"- {violation}")
 
 st.caption(
-    "The pit-wall strategy is the application-owned publication boundary. "
+    "The pit-wall strategy is published only after deterministic verification. "
     "Specialist outputs below are supporting evidence, not independent final decisions."
 )
 
@@ -157,11 +180,13 @@ status_col1.metric("LLM Calls Used", st.session_state.llm_calls_used)
 status_col2.metric("Calls Remaining", max(0, calls_remaining))
 status_col3.metric("Cooldown (s)", cooldown_remaining)
 
-current_state_hash = build_state_hash(data, df, orchestrated_strategy)
+current_state_hash = build_state_hash(data, df, orchestrated_strategy, verification)
 
 llm_disabled_reason = None
 
-if data["lap"] < MIN_LAPS_FOR_LLM:
+if not verification["publishable"]:
+    llm_disabled_reason = "AI strategy generation is disabled because the deterministic pit-wall strategy failed verification."
+elif data["lap"] < MIN_LAPS_FOR_LLM:
     llm_disabled_reason = f"Simulate to at least lap {MIN_LAPS_FOR_LLM} before generating an AI recommendation."
 elif st.session_state.llm_calls_used >= MAX_LLM_CALLS_PER_SESSION:
     llm_disabled_reason = "Session limit reached for AI recommendations. Reset the simulation to start over."
