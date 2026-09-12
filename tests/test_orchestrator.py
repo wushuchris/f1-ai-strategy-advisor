@@ -142,7 +142,7 @@ def test_pace_specialist_failure_uses_conservative_fallback(monkeypatch):
     assert result["priority"] == "High"
 
 
-def test_track_specialist_failure_uses_conservative_fallback(monkeypatch):
+def test_track_specialist_failure_uses_neutral_reassessment_fallback(monkeypatch):
     def fail_track(_):
         raise RuntimeError("simulated track specialist failure")
 
@@ -150,7 +150,9 @@ def test_track_specialist_failure_uses_conservative_fallback(monkeypatch):
 
     result = run_strategy_orchestrator(make_telemetry(), history=make_history())
 
+    assert result["track"]["condition"] == "Dry"
     assert result["track"]["risk"] == "Elevated"
+    assert result["track"]["action"] == "Reassess Track State"
     assert result["track"]["confidence"] == 0.0
     assert "fallback" in result["track"]["rationale"].lower()
     assert result["final_action"] == "Manage and Reassess"
