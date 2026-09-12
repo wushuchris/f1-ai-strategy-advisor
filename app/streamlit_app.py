@@ -84,7 +84,10 @@ if len(st.session_state.history) > 50:
 # --- Current state ---
 data = st.session_state.history[-1]
 df = pd.DataFrame(st.session_state.history)
-orchestrated_strategy = run_strategy_orchestrator(data)
+orchestrated_strategy = run_strategy_orchestrator(
+    data,
+    history=st.session_state.history,
+)
 verification = verify_strategy(orchestrated_strategy)
 rules_strategy = orchestrated_strategy["rules"]
 tire_assessment = orchestrated_strategy["tire"]
@@ -156,13 +159,17 @@ with st.expander("Specialist Analysis", expanded=True):
     )
 
     st.markdown("#### Pace Analyst")
-    pace_col1, pace_col2, pace_col3, pace_col4 = st.columns(4)
+    pace_col1, pace_col2, pace_col3, pace_col4, pace_col5 = st.columns(5)
     pace_col1.metric("Pace Status", pace_assessment["status"])
     pace_col2.metric("Recommended Action", pace_assessment["action"])
-    pace_col3.metric("Target Lap Time (s)", pace_assessment["target_lap_time"])
-    pace_col4.metric("Delta to Target (s)", pace_assessment["delta_to_target"])
+    pace_col3.metric("Reference Lap (s)", pace_assessment["reference_lap_time"])
+    pace_col4.metric("Delta to Reference (s)", pace_assessment["delta_to_reference"])
+    pace_col5.metric("Comparable Laps", pace_assessment["history_laps"])
     st.write(pace_assessment["rationale"])
-    st.caption(f"Assessment confidence: {pace_assessment['confidence']:.0%}")
+    st.caption(
+        f"Assessment confidence: {pace_assessment['confidence']:.0%}. "
+        "Pace is compared with the median of up to the three most recent laps under the same reported track condition."
+    )
 
     st.markdown("#### Track Conditions Analyst")
     track_col1, track_col2, track_col3 = st.columns(3)
