@@ -49,6 +49,20 @@ class PaceAction(str, Enum):
     MANAGE = "Manage and Reassess"
 
 
+class TrackRisk(str, Enum):
+    """Application-owned operational risk states for observed track conditions."""
+
+    LOW = "Low"
+    ELEVATED = "Elevated"
+
+
+class TrackAction(str, Enum):
+    """Bounded responses emitted by the track-condition analyst."""
+
+    MAINTAIN = "Maintain"
+    ADAPT_TO_WET = "Adapt to Wet Conditions"
+
+
 class StrategyAction(str, Enum):
     """Application-owned final actions published by the strategy orchestrator."""
 
@@ -107,6 +121,18 @@ class PaceAssessment(BaseModel):
     action: PaceAction
     target_lap_time: float = Field(gt=0)
     delta_to_target: float
+    confidence: float = Field(ge=0.0, le=1.0)
+    rationale: str = Field(min_length=1)
+
+
+class TrackAssessment(BaseModel):
+    """Validated output contract for observed track-condition analysis."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    condition: TrackCondition
+    risk: TrackRisk
+    action: TrackAction
     confidence: float = Field(ge=0.0, le=1.0)
     rationale: str = Field(min_length=1)
 
