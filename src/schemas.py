@@ -66,6 +66,14 @@ class TrackAction(str, Enum):
     REASSESS = "Reassess Track State"
 
 
+class SpecialistComponent(str, Enum):
+    """Specialist components that may enter deterministic fallback mode."""
+
+    TIRE = "Tire"
+    PACE = "Pace"
+    TRACK = "Track"
+
+
 class StrategyAction(str, Enum):
     """Application-owned final actions published by the strategy orchestrator."""
 
@@ -150,6 +158,7 @@ class OrchestratedStrategy(BaseModel):
     tire: TireAssessment
     pace: PaceAssessment
     track: TrackAssessment
+    fallback_components: list[SpecialistComponent]
     final_action: StrategyAction
     priority: StrategyPriority
     confidence: float = Field(ge=0.0, le=1.0)
