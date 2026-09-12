@@ -127,6 +127,7 @@ rules_strategy = orchestrated_strategy["rules"]
 tire_assessment = orchestrated_strategy["tire"]
 pace_assessment = orchestrated_strategy["pace"]
 track_assessment = orchestrated_strategy["track"]
+fallback_components = orchestrated_strategy["fallback_components"]
 
 # --- Metrics ---
 col1, col2, col3, col4 = st.columns(4)
@@ -153,6 +154,14 @@ st.subheader("Pit Wall Strategy")
 verification_col1, verification_col2 = st.columns(2)
 verification_col1.metric("Verification", verification["status"])
 verification_col2.metric("Checks Run", verification["checks_run"])
+
+if fallback_components:
+    st.warning(
+        "Degraded mode active. Deterministic fallback is currently handling: "
+        f"{', '.join(fallback_components)}. The verifier requires a conservative publication state while fallback is active."
+    )
+else:
+    st.caption("All specialist components are operating normally; no deterministic fallbacks are active.")
 
 if verification["publishable"]:
     strategy_col1, strategy_col2, strategy_col3 = st.columns(3)
