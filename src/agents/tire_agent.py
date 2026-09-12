@@ -8,49 +8,47 @@ from src.schemas import (
 
 
 def analyze_tires(data: dict) -> dict:
-    """Evaluate tire stress using deterministic application-owned policy."""
+    """Evaluate observed tire stress without inferring unsupported tire life."""
 
     telemetry = TelemetrySnapshot.model_validate(data)
 
     if telemetry.tire_temp >= 105:
         risk = TireRisk.HIGH
         action = TireAction.PREPARE_TO_PIT
-        estimated_remaining_laps = 2
         confidence = 0.95
         rationale = (
             "Tire temperature is at or above the high-risk threshold, increasing the "
-            "likelihood of rapid degradation."
+            "likelihood of rapid degradation. Prepare for a pit stop and continue monitoring."
         )
-    elif telemetry.tire_temp >= 100 or telemetry.lap >= 20:
+    elif telemetry.tire_temp >= 100:
         risk = TireRisk.MEDIUM
         action = TireAction.MANAGE
-        estimated_remaining_laps = 5
         confidence = 0.85
         rationale = (
-            "Tire stress is elevated due to temperature or stint length. Pace management "
-            "and continued monitoring are recommended."
+            "Tire temperature is elevated. Pace management and continued monitoring are "
+            "recommended, but remaining tire life cannot be estimated from the available telemetry."
         )
     else:
         risk = TireRisk.LOW
         action = TireAction.MAINTAIN
-        estimated_remaining_laps = 8
         confidence = 0.90
-        rationale = "Current tire temperature and stint length remain within the stable operating range."
+        rationale = (
+            "Current tire temperature remains within the stable operating range. Continue monitoring; "
+            "the available telemetry does not include tire age, compound, or wear measurements."
+        )
 
     if telemetry.track_condition == TrackCondition.WET and risk == TireRisk.LOW:
         risk = TireRisk.MEDIUM
         action = TireAction.MANAGE
-        estimated_remaining_laps = min(estimated_remaining_laps, 5)
         confidence = 0.80
         rationale = (
-            "Wet conditions increase tire-management uncertainty even though temperature "
-            "and stint length are otherwise stable."
+            "Wet conditions increase tire-management uncertainty even though the observed tire "
+            "temperature is otherwise stable. No tire-life estimate is inferred from the current data."
         )
 
     assessment = TireAssessment(
         risk=risk,
         action=action,
-        estimated_remaining_laps=estimated_remaining_laps,
         confidence=confidence,
         rationale=rationale,
     )
