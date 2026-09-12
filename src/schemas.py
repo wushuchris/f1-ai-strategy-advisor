@@ -146,6 +146,7 @@ class OrchestratedStrategy(BaseModel):
     rules: RulesStrategy
     tire: TireAssessment
     pace: PaceAssessment
+    track: TrackAssessment
     final_action: StrategyAction
     priority: StrategyPriority
     confidence: float = Field(ge=0.0, le=1.0)
