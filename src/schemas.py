@@ -63,6 +63,7 @@ class TrackAction(str, Enum):
 
     MAINTAIN = "Maintain"
     ADAPT_TO_WET = "Adapt to Wet Conditions"
+    REASSESS = "Reassess Track State"
 
 
 class StrategyAction(str, Enum):
