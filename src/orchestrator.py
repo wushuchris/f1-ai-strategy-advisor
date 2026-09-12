@@ -1,5 +1,6 @@
 from src.agents.pace_agent import analyze_pace
 from src.agents.tire_agent import analyze_tires
+from src.agents.track_agent import analyze_track
 from src.rules import generate_strategy
 from src.schemas import (
     OrchestratedStrategy,
@@ -12,6 +13,8 @@ from src.schemas import (
     TireAction,
     TireAssessment,
     TireRisk,
+    TrackAssessment,
+    TrackRisk,
 )
 
 
@@ -19,9 +22,12 @@ def run_strategy_orchestrator(data: dict) -> dict:
     """Run specialist analysis and publish one application-governed strategy state."""
 
     telemetry = TelemetrySnapshot.model_validate(data)
-    rules = RulesStrategy.model_validate(generate_strategy(telemetry.model_dump(mode="json")))
-    tire = TireAssessment.model_validate(analyze_tires(telemetry.model_dump(mode="json")))
-    pace = PaceAssessment.model_validate(analyze_pace(telemetry.model_dump(mode="json")))
+    telemetry_data = telemetry.model_dump(mode="json")
+
+    rules = RulesStrategy.model_validate(generate_strategy(telemetry_data))
+    tire = TireAssessment.model_validate(analyze_tires(telemetry_data))
+    pace = PaceAssessment.model_validate(analyze_pace(telemetry_data))
+    track = TrackAssessment.model_validate(analyze_track(telemetry_data))
 
     if tire.action == TireAction.PREPARE_TO_PIT:
         final_action = StrategyAction.PREPARE_TO_PIT
@@ -33,6 +39,7 @@ def run_strategy_orchestrator(data: dict) -> dict:
     elif (
         tire.risk == TireRisk.HIGH
         or pace.status == PaceStatus.CRITICAL
+        or track.risk == TrackRisk.ELEVATED
         or rules.priority == StrategyPriority.HIGH
     ):
         final_action = StrategyAction.MANAGE
@@ -61,9 +68,10 @@ def run_strategy_orchestrator(data: dict) -> dict:
         rules=rules,
         tire=tire,
         pace=pace,
+        track=track,
         final_action=final_action,
         priority=priority,
-        confidence=min(tire.confidence, pace.confidence),
+        confidence=min(tire.confidence, pace.confidence, track.confidence),
         summary=summary,
     )
 
