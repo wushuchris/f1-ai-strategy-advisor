@@ -9,10 +9,8 @@ import streamlit as st
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from src.simulation import initialize_race_state, simulate_next_lap
-from src.rules import generate_strategy
 from src.llm import generate_llm_strategy
-from src.agents.tire_agent import analyze_tires
-from src.agents.pace_agent import analyze_pace
+from src.orchestrator import run_strategy_orchestrator
 
 st.set_page_config(
     page_title="F1 AI Strategy Advisor",
@@ -47,11 +45,11 @@ LLM_COOLDOWN_SECONDS = 30
 MAX_LLM_CALLS_PER_SESSION = 5
 
 
-def build_state_hash(current_data: dict, history_df: pd.DataFrame, rules_strategy: dict) -> str:
+def build_state_hash(current_data: dict, history_df: pd.DataFrame, orchestrated_strategy: dict) -> str:
     payload = {
         "current_data": current_data,
         "recent_history": history_df.tail(5).to_dict(orient="records"),
-        "rules_strategy": rules_strategy,
+        "orchestrated_strategy": orchestrated_strategy,
     }
     return hashlib.sha256(str(payload).encode("utf-8")).hexdigest()
 
@@ -79,9 +77,10 @@ if len(st.session_state.history) > 50:
 # --- Current state ---
 data = st.session_state.history[-1]
 df = pd.DataFrame(st.session_state.history)
-rules_strategy = generate_strategy(data)
-tire_assessment = analyze_tires(data)
-pace_assessment = analyze_pace(data)
+orchestrated_strategy = run_strategy_orchestrator(data)
+rules_strategy = orchestrated_strategy["rules"]
+tire_assessment = orchestrated_strategy["tire"]
+pace_assessment = orchestrated_strategy["pace"]
 
 # --- Metrics ---
 col1, col2, col3, col4 = st.columns(4)
@@ -102,36 +101,49 @@ st.line_chart(df.set_index("lap")["lap_time"])
 st.subheader("Fuel Level Trend")
 st.line_chart(df.set_index("lap")["fuel_level"])
 
-# --- Tire analyst ---
-st.subheader("Tire Analyst")
+# --- Authoritative orchestrated strategy ---
+st.subheader("Pit Wall Strategy")
 
-tire_col1, tire_col2, tire_col3 = st.columns(3)
-tire_col1.metric("Degradation Risk", tire_assessment["risk"])
-tire_col2.metric("Recommended Action", tire_assessment["action"])
-tire_col3.metric("Estimated Laps Remaining", tire_assessment["estimated_remaining_laps"])
+strategy_col1, strategy_col2, strategy_col3 = st.columns(3)
+strategy_col1.metric("Final Action", orchestrated_strategy["final_action"])
+strategy_col2.metric("Priority", orchestrated_strategy["priority"])
+strategy_col3.metric("Confidence", f"{orchestrated_strategy['confidence']:.0%}")
 
-st.write(tire_assessment["rationale"])
-st.caption(f"Assessment confidence: {tire_assessment['confidence']:.0%}")
-
-# --- Pace analyst ---
-st.subheader("Pace Analyst")
-
-pace_col1, pace_col2, pace_col3, pace_col4 = st.columns(4)
-pace_col1.metric("Pace Status", pace_assessment["status"])
-pace_col2.metric("Recommended Action", pace_assessment["action"])
-pace_col3.metric("Target Lap Time (s)", pace_assessment["target_lap_time"])
-pace_col4.metric("Delta to Target (s)", pace_assessment["delta_to_target"])
-
-st.write(pace_assessment["rationale"])
-st.caption(f"Assessment confidence: {pace_assessment['confidence']:.0%}")
-
-# --- Rules strategy ---
-st.subheader("Rules-Based Strategy Recommendation")
-if rules_strategy["priority"] == "High":
-    st.warning(f"Priority: {rules_strategy['priority']}")
+if orchestrated_strategy["priority"] == "High":
+    st.warning(orchestrated_strategy["summary"])
 else:
-    st.info(f"Priority: {rules_strategy['priority']}")
-st.write(rules_strategy["recommendation"])
+    st.success(orchestrated_strategy["summary"])
+
+st.caption(
+    "The pit-wall strategy is the application-owned publication boundary. "
+    "Specialist outputs below are supporting evidence, not independent final decisions."
+)
+
+# --- Specialist evidence ---
+with st.expander("Specialist Analysis", expanded=True):
+    st.markdown("#### Tire Analyst")
+    tire_col1, tire_col2, tire_col3 = st.columns(3)
+    tire_col1.metric("Degradation Risk", tire_assessment["risk"])
+    tire_col2.metric("Recommended Action", tire_assessment["action"])
+    tire_col3.metric("Estimated Laps Remaining", tire_assessment["estimated_remaining_laps"])
+    st.write(tire_assessment["rationale"])
+    st.caption(f"Assessment confidence: {tire_assessment['confidence']:.0%}")
+
+    st.markdown("#### Pace Analyst")
+    pace_col1, pace_col2, pace_col3, pace_col4 = st.columns(4)
+    pace_col1.metric("Pace Status", pace_assessment["status"])
+    pace_col2.metric("Recommended Action", pace_assessment["action"])
+    pace_col3.metric("Target Lap Time (s)", pace_assessment["target_lap_time"])
+    pace_col4.metric("Delta to Target (s)", pace_assessment["delta_to_target"])
+    st.write(pace_assessment["rationale"])
+    st.caption(f"Assessment confidence: {pace_assessment['confidence']:.0%}")
+
+    st.markdown("#### Rules Engine")
+    if rules_strategy["priority"] == "High":
+        st.warning(f"Priority: {rules_strategy['priority']}")
+    else:
+        st.info(f"Priority: {rules_strategy['priority']}")
+    st.write(rules_strategy["recommendation"])
 
 # --- LLM safeguards status ---
 st.subheader("LLM Strategy Advisor")
@@ -145,7 +157,7 @@ status_col1.metric("LLM Calls Used", st.session_state.llm_calls_used)
 status_col2.metric("Calls Remaining", max(0, calls_remaining))
 status_col3.metric("Cooldown (s)", cooldown_remaining)
 
-current_state_hash = build_state_hash(data, df, rules_strategy)
+current_state_hash = build_state_hash(data, df, orchestrated_strategy)
 
 llm_disabled_reason = None
 
