@@ -276,6 +276,11 @@ llm_disabled_reason = None
 
 if not verification["publishable"]:
     llm_disabled_reason = "AI interpretation is disabled because the deterministic pit-wall strategy failed verification."
+elif fallback_components:
+    llm_disabled_reason = (
+        "AI interpretation is disabled while deterministic specialist fallback mode is active. "
+        "The verified conservative pit-wall strategy remains authoritative until all specialists recover."
+    )
 elif data["lap"] < MIN_LAPS_FOR_LLM:
     llm_disabled_reason = f"Simulate to at least lap {MIN_LAPS_FOR_LLM} before generating an AI interpretation."
 elif st.session_state.llm_calls_used >= MAX_LLM_CALLS_PER_SESSION:
