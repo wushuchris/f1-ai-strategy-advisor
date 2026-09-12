@@ -60,8 +60,32 @@ def test_high_priority_signal_requires_high_priority_publication():
     assert any("require High publication priority" in item for item in result["violations"])
 
 
+def test_wet_track_signal_requires_high_priority_publication():
+    strategy = run_strategy_orchestrator(
+        make_telemetry(track_condition="Wet", lap_time=89.5)
+    )
+    strategy["priority"] = "Normal"
+
+    result = verify_strategy(strategy)
+
+    assert result["status"] == "Rejected"
+    assert any("require High publication priority" in item for item in result["violations"])
+
+
 def test_maintain_with_developing_concern_is_rejected():
     strategy = run_strategy_orchestrator(make_telemetry(tire_temp=100.0))
+    strategy["final_action"] = "Maintain"
+
+    result = verify_strategy(strategy)
+
+    assert result["status"] == "Rejected"
+    assert any("Maintain may only" in item for item in result["violations"])
+
+
+def test_maintain_with_elevated_track_risk_is_rejected():
+    strategy = run_strategy_orchestrator(
+        make_telemetry(track_condition="Wet", lap_time=89.5)
+    )
     strategy["final_action"] = "Maintain"
 
     result = verify_strategy(strategy)
