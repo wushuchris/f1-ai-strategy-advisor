@@ -33,6 +33,22 @@ class TireAction(str, Enum):
     PREPARE_TO_PIT = "Prepare to Pit"
 
 
+class PaceStatus(str, Enum):
+    """Application-owned pace performance states."""
+
+    ON_TARGET = "On Target"
+    DEGRADED = "Degraded"
+    CRITICAL = "Critical"
+
+
+class PaceAction(str, Enum):
+    """Bounded pace-management actions emitted by the pace analyst."""
+
+    MAINTAIN = "Maintain"
+    REVIEW = "Review Pace Loss"
+    MANAGE = "Manage and Reassess"
+
+
 class TelemetrySnapshot(BaseModel):
     """Validated telemetry for one simulated race lap."""
 
@@ -62,5 +78,18 @@ class TireAssessment(BaseModel):
     risk: TireRisk
     action: TireAction
     estimated_remaining_laps: int = Field(ge=0)
+    confidence: float = Field(ge=0.0, le=1.0)
+    rationale: str = Field(min_length=1)
+
+
+class PaceAssessment(BaseModel):
+    """Validated output contract for deterministic pace analysis."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: PaceStatus
+    action: PaceAction
+    target_lap_time: float = Field(gt=0)
+    delta_to_target: float
     confidence: float = Field(ge=0.0, le=1.0)
     rationale: str = Field(min_length=1)
