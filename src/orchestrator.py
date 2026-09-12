@@ -60,11 +60,11 @@ def _run_track_analysis(telemetry_data: dict) -> TrackAssessment:
         return TrackAssessment(
             condition=telemetry_data["track_condition"],
             risk=TrackRisk.ELEVATED,
-            action=TrackAction.ADAPT_TO_WET,
+            action=TrackAction.REASSESS,
             confidence=0.0,
             rationale=(
                 "Track-condition specialist analysis failed. A conservative deterministic fallback "
-                "is active, so the strategy should be managed until the surface state is reassessed."
+                "is active, so the strategy should be managed until the reported surface state is reassessed."
             ),
         )
 
