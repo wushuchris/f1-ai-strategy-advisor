@@ -309,9 +309,14 @@ if generate_clicked:
 
     render_llm_interpretation(llm_result)
 
-# Keep showing the last validated interpretation after reruns.
-if st.session_state.last_llm_response:
+# Only show a cached interpretation while it still matches the current verified state.
+if st.session_state.last_llm_response and same_state:
     with st.expander("Most Recent AI Interpretation", expanded=False):
         render_llm_interpretation(st.session_state.last_llm_response)
+elif st.session_state.last_llm_response:
+    st.caption(
+        "The previous AI interpretation is hidden because telemetry or the verified strategy has changed. "
+        "Generate a new interpretation for the current state."
+    )
 
 st.success("Telemetry system active")
