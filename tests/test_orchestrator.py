@@ -110,6 +110,53 @@ def test_developing_specialist_concern_requests_review():
     assert result["tire"]["risk"] == "Medium"
 
 
+def test_tire_specialist_failure_uses_conservative_fallback(monkeypatch):
+    def fail_tire(_):
+        raise RuntimeError("simulated tire specialist failure")
+
+    monkeypatch.setattr("src.orchestrator.analyze_tires", fail_tire)
+
+    result = run_strategy_orchestrator(make_telemetry(), history=make_history())
+
+    assert result["tire"]["risk"] == "High"
+    assert result["tire"]["action"] == "Manage"
+    assert result["tire"]["confidence"] == 0.0
+    assert "fallback" in result["tire"]["rationale"].lower()
+    assert result["final_action"] == "Manage and Reassess"
+    assert result["priority"] == "High"
+
+
+def test_pace_specialist_failure_uses_conservative_fallback(monkeypatch):
+    def fail_pace(_, history=None):
+        raise RuntimeError("simulated pace specialist failure")
+
+    monkeypatch.setattr("src.orchestrator.analyze_pace", fail_pace)
+
+    result = run_strategy_orchestrator(make_telemetry(), history=make_history())
+
+    assert result["pace"]["status"] == "Critical"
+    assert result["pace"]["action"] == "Manage and Reassess"
+    assert result["pace"]["confidence"] == 0.0
+    assert "fallback" in result["pace"]["rationale"].lower()
+    assert result["final_action"] == "Manage and Reassess"
+    assert result["priority"] == "High"
+
+
+def test_track_specialist_failure_uses_conservative_fallback(monkeypatch):
+    def fail_track(_):
+        raise RuntimeError("simulated track specialist failure")
+
+    monkeypatch.setattr("src.orchestrator.analyze_track", fail_track)
+
+    result = run_strategy_orchestrator(make_telemetry(), history=make_history())
+
+    assert result["track"]["risk"] == "Elevated"
+    assert result["track"]["confidence"] == 0.0
+    assert "fallback" in result["track"]["rationale"].lower()
+    assert result["final_action"] == "Manage and Reassess"
+    assert result["priority"] == "High"
+
+
 def test_invalid_telemetry_is_rejected_before_orchestration():
     with pytest.raises(ValidationError):
         run_strategy_orchestrator(
