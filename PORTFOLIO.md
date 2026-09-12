@@ -12,6 +12,17 @@ This architecture reflects a core design principle:
 
 > **Models interpret. Application code validates, orchestrates, verifies, and publishes.**
 
+## Key architecture decisions
+
+- **Centralized orchestration instead of agent voting:** the pit-wall recommendation is assembled by application code from structured specialist outputs rather than negotiated through free-form agent conversation.
+- **Deterministic publication control:** specialists can contribute evidence, but only the verifier determines whether a strategy is safe to publish.
+- **Evidence-bounded specialist behavior:** analysts do not infer tire age, future weather, or other race variables that are absent from the telemetry contract.
+- **Conservative degraded mode:** specialist failures trigger explicit fallback metadata, zero publication confidence, and bounded reassessment behavior instead of silent continuation.
+- **LLM downstream of authority:** probabilistic interpretation is optional and cannot overwrite the verified strategy.
+- **Deterministic regression evaluation:** core behavior can be tested in CI without external model calls or inference cost.
+
+These decisions make the system intentionally less autonomous than a free-form multi-agent demo, but more auditable, testable, and suitable as an example of governed AI engineering.
+
 ## Reusable engineering primitives
 
 - Typed Pydantic contracts for telemetry and specialist outputs
