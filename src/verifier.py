@@ -45,13 +45,19 @@ def verify_strategy(strategy_data: dict) -> dict:
         violations.append("High publication priority requires at least one high-priority supporting signal.")
 
     checks_run += 1
+    pace_allows_maintain = strategy.pace.status in {
+        PaceStatus.MONITORING,
+        PaceStatus.ON_TARGET,
+    }
     if strategy.final_action == StrategyAction.MAINTAIN and (
         strategy.tire.risk != TireRisk.LOW
-        or strategy.pace.status != PaceStatus.ON_TARGET
+        or not pace_allows_maintain
         or strategy.track.risk != TrackRisk.LOW
         or strategy.rules.priority != StrategyPriority.NORMAL
     ):
-        violations.append("Maintain may only be published when all bounded inputs are stable.")
+        violations.append(
+            "Maintain may only be published when bounded inputs are stable or the pace baseline is still forming."
+        )
 
     checks_run += 1
     expected_confidence = min(
