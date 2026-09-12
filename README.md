@@ -247,6 +247,21 @@ The public demo rate-limits LLM requests per session to control inference usage.
 
 ---
 
+## ⚠️ Scope and Limitations
+
+This is a portfolio and engineering demonstration, not a production Formula 1 race-strategy model.
+
+- Telemetry is synthetic and intentionally simplified rather than sourced from live FIA/F1 timing feeds.
+- The system does not model tire compound, stint age, measured wear, weather radar, safety-car probability, traffic, pit-lane loss, undercut/overcut dynamics, competitor strategy, or circuit-specific degradation.
+- The Track Conditions Analyst responds only to the reported surface state and does not forecast future weather.
+- Evaluation scenarios are deterministic regression contracts for system behavior, not claims of real-world race-strategy accuracy.
+- LLM request limits and cooldowns are session-scoped in the public demo; they are not a global quota across all users.
+- The LLM layer is explanatory by design and should not be interpreted as an autonomous race engineer.
+
+These constraints are deliberate: the project focuses on governed AI architecture, evidence-bounded reasoning, failure handling, verification, and observable decision authority.
+
+---
+
 ## 📁 Project Structure
 
 ```text
