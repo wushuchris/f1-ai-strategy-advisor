@@ -12,6 +12,7 @@ from src.simulation import initialize_race_state, simulate_next_lap
 from src.rules import generate_strategy
 from src.llm import generate_llm_strategy
 from src.agents.tire_agent import analyze_tires
+from src.agents.pace_agent import analyze_pace
 
 st.set_page_config(
     page_title="F1 AI Strategy Advisor",
@@ -80,6 +81,7 @@ data = st.session_state.history[-1]
 df = pd.DataFrame(st.session_state.history)
 rules_strategy = generate_strategy(data)
 tire_assessment = analyze_tires(data)
+pace_assessment = analyze_pace(data)
 
 # --- Metrics ---
 col1, col2, col3, col4 = st.columns(4)
@@ -110,6 +112,18 @@ tire_col3.metric("Estimated Laps Remaining", tire_assessment["estimated_remainin
 
 st.write(tire_assessment["rationale"])
 st.caption(f"Assessment confidence: {tire_assessment['confidence']:.0%}")
+
+# --- Pace analyst ---
+st.subheader("Pace Analyst")
+
+pace_col1, pace_col2, pace_col3, pace_col4 = st.columns(4)
+pace_col1.metric("Pace Status", pace_assessment["status"])
+pace_col2.metric("Recommended Action", pace_assessment["action"])
+pace_col3.metric("Target Lap Time (s)", pace_assessment["target_lap_time"])
+pace_col4.metric("Delta to Target (s)", pace_assessment["delta_to_target"])
+
+st.write(pace_assessment["rationale"])
+st.caption(f"Assessment confidence: {pace_assessment['confidence']:.0%}")
 
 # --- Rules strategy ---
 st.subheader("Rules-Based Strategy Recommendation")
